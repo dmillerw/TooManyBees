@@ -1,0 +1,88 @@
+buildscript {
+	// Variables
+	ext {
+		minecraft_version = '1.7.10'
+		forge_version = '10.13.4.1470-1.7.10'
+		kotlin_version = '0.12.200'
+		mod_version = '1.0.0'
+	}
+	
+	repositories {
+        mavenCentral()
+        maven {
+            name = 'Forge'
+            url = 'http://files.minecraftforge.net/maven'
+        }
+        // Sonatype (for SpecialSource in 1.7+)
+        maven {
+            name = "Sonatype Nexus"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
+repositories {
+    maven {
+        name 'Forge'
+        url 'http://files.minecraftforge.net/maven'
+    }
+    mavenCentral()
+    maven {
+        name 'MinecraftS3'
+        url 'http://s3.amazonaws.com/Minecraft.Download/libraries'
+    }
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'forge'
+
+configurations {
+    shade
+    compile.extendsFrom shade
+}
+
+dependencies {
+    shade "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
+    shade "org.jetbrains.kotlin:kotlin-reflect:${kotlin_version}"
+    testCompile "junit:junit:4.+"
+}
+
+minecraft {
+    version = minecraft_version + "-" + forge_version
+    runDir = 'run'
+    replace '@VERSION@', mod_version
+    replace '@KOTLIN@', kotlin_version
+	
+	srgExtra "PK: kotlin me/dmillerw/toomanybees/repack/kotlin"
+}
+
+processResources {
+    // Make sure this gets re-executed on updates.
+    inputs.property "mod_version", mod_version
+    inputs.property "minecraft_version", minecraft_version
+    inputs.property "kotlin_version", kotlin_version
+    
+    // Process mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        include '**/*.info'
+        expand 'version':mod_version,'MCversion':mod_version,'kotlin_version':kotlin_version
+    }
+
+    // Copy anything else directly
+    from(sourceSets.main.resources.srcDirs) {
+        exclude '**/*.info'
+    }
+}
+
+jar {
+    // Shading
+    configurations.shade.each { dep ->
+        from(project.zipTree(dep)){
+            exclude 'META-INF', 'META-INF/**'
+        }
+    }
+}
